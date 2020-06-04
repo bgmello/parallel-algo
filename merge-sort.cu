@@ -47,7 +47,7 @@ void parallel_merge(int *a, int *c,  int l, int m , int r){
 }
 
 void merge_sort(int* arr, int n){
-  int *arr_device, *c_device;
+  int *arr_device, *c_device, *tmp_device;
 
   cudaMalloc(&c_device, n*sizeof(int));
   cudaMalloc(&arr_device, n*sizeof(int));
@@ -60,7 +60,7 @@ void merge_sort(int* arr, int n){
   
   warg_size = props.multiProcessorCount;
 
-  int num_threads = 128, num_blocks = 2*warg_size;
+  int num_threads = 128, num_blocks = 4*warg_size;
 
   for(int size=1;size<=n-1;size = 2*size){
     for(int l=0;l<n-1;l+=2*size){
@@ -71,7 +71,9 @@ void merge_sort(int* arr, int n){
       parallel_merge<<<num_blocks,num_threads, 0, stream>>>(arr_device, c_device, l, m+1, r+1);
     }
     cudaDeviceSynchronize();
-    cudaMemcpy(arr_device, c_device, n*sizeof(int), cudaMemcpyDeviceToDevice);
+    tmp_device = arr_device;
+    arr_device = c_device;
+    c_device = tmp_device;
   }
   cudaDeviceSynchronize();
   cudaMemcpy(arr, arr_device, n*sizeof(int), cudaMemcpyDeviceToHost);
